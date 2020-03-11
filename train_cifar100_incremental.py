@@ -223,7 +223,7 @@ def train_model(path_to_syllabus):
 
             # After each episode, perfrom required 'consolidation'-steps for chosen methods
             tasks_per_episode = 100
-            new_episode = True if ((task_id-1) % tasks_per_episode)==0 else False
+            new_episode = True if (task_id % tasks_per_episode)==0 else False
             if new_episode:
                 model.previous_model = None  # -> we only need a copy of the last model, discard any previous copies
                 # -SI: calculate and update the normalized path integral

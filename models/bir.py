@@ -580,18 +580,25 @@ class IntegratedReplayModel(ContinualLearner):
             (_, hE_, logits_), _ = self.forward(x_, hidden=True)
             target_probs = F.softmax(target_logits / self.distill_temp, dim=1)
             if self.only_active:
-                print(target_probs)
-                print(target_probs.shape)
                 # for those classes not in [self.previous_model.active_classes], set target_prob to zero
-                target_probs = torch.tensor([(
-                    target_probs[self.previous_model.active_classes.index(i)] if i in self.previous_model.active_classes else 0.
-                ) for i in range(self.classes)]).to(self._device())
+                new_target_probs = None
+                for i in range(self.classes):
+                    if i in self.previous_model.active_classes:
+                        tensor_to_add = target_probs[:, self.previous_model.active_classes.index(i)].unsqueeze(1)
+                    else:
+                        tensor_to_add = target_probs[:, 0].zero_().unsqueeze(1)
+
+                    if new_target_probs is None:
+                        new_target_probs = tensor_to_add
+                    else:
+                        new_target_probs = torch.cat([new_target_probs, tensor_to_add], dim=1)
+                target_probs = new_target_probs
             recon_x_, mu_, logvar_, z_ = self.continued(hE_, gate_input=target_probs if self.dg_gates else None)
 
             # -if requested, restrict predictions to classes seen so far
             if self.only_active:
                 # -remove predictions for classes not yet seen, in both predictions and targets
-                logits_ = logits[:, self.active_classes]
+                logits_ = logits_[:, self.active_classes]
 
             # -evaluate replayed data
             reconL_r, variatL_r, _, distilL_r = self.loss_function(
